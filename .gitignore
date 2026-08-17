@@ -15,8 +15,7 @@ env/
 .ipynb_checkpoints/
 
 # ML models
-*.pkl
-*.joblib
+
 *.h5
 *.pt
 *.pth
