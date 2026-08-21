@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Query
 from fastapi.encoders import jsonable_encoder
 from typing import Optional
-
+from fastapi.middleware.cors import CORSMiddleware
 from .database import reviews_collection
 from .schemas import ReviewRequest, ReviewPrediction
 from .models import sentiment_model, aspect_model, anomaly_model
@@ -13,6 +13,18 @@ app = FastAPI(
     title="E-Taxi IQ Albania API",
     description="ML-powered electric taxi review intelligence API",
     version="1.0.0"
+)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -231,6 +243,35 @@ def get_analytics():
         if rating_result
         else 0
     )
+        # ==========================================
+    # RATING DISTRIBUTION
+    # ==========================================
+
+    rating_distribution_pipeline = [
+        {
+            "$group": {
+                "_id": "$rating",
+                "count": {"$sum": 1}
+            }
+        },
+        {
+            "$sort": {
+                "_id": 1
+            }
+        }
+    ]
+
+    rating_distribution_result = list(
+        reviews_collection.aggregate(
+            rating_distribution_pipeline
+        )
+    )
+
+    rating_distribution = {
+        str(item["_id"]): item["count"]
+        for item in rating_distribution_result
+        if item["_id"] is not None
+    }
 
 
     # ==========================================
@@ -359,6 +400,7 @@ def get_analytics():
     return {
         "total_reviews": total_reviews,
         "average_rating": round(average_rating, 2),
+        "rating_distribution": rating_distribution,
         "sentiment_distribution": sentiment_distribution,
         "aspect_distribution": aspect_distribution,
         "anomalies": {
