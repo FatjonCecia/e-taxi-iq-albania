@@ -13,8 +13,10 @@ export const getAnalytics = async () => {
 };
 
 
-export const getReviews = async () => {
-  const response = await API.get("/reviews");
+export const getReviews = async (filters = {}) => {
+  const response = await API.get("/reviews", {
+    params: filters,
+  });
 
   return response.data;
 };

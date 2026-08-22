@@ -209,3 +209,38 @@ body {
   }
 
 }
+
+.dashboard-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 14px 5%;
+
+  background: #111827;
+}
+
+.dashboard-nav-links {
+  display: flex;
+  gap: 24px;
+}
+
+.dashboard-nav-links a {
+  color: white;
+  text-decoration: none;
+
+  font-weight: 500;
+
+  transition: opacity 0.2s ease;
+}
+
+.dashboard-nav-links a:hover {
+  opacity: 0.7;
+}

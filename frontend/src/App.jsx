@@ -1,4 +1,10 @@
 import { useEffect, useState } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Link
+} from "react-router-dom";
 
 import { getAnalytics } from "./services/api";
 
@@ -8,10 +14,12 @@ import AspectChart from "./components/AspectChart";
 import RatingChart from "./components/RatingChart";
 import AnomalyChart from "./components/AnomalyChart";
 
+import Reviews from "./pages/Reviews";
+
 import "./App.css";
 
 
-function App() {
+function Dashboard() {
 
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -47,28 +55,16 @@ function App() {
   }, []);
 
 
-  /* ==============================
-     LOADING
-  ============================== */
-
   if (loading) {
 
     return (
       <div className="container py-5">
-
-        <h3>
-          Loading dashboard...
-        </h3>
-
+        <h3>Loading dashboard...</h3>
       </div>
     );
 
   }
 
-
-  /* ==============================
-     ERROR
-  ============================== */
 
   if (error) {
 
@@ -86,12 +82,10 @@ function App() {
 
 
   return (
+
     <div className="container-fluid p-0">
 
-
-      {/* ==============================
-          NAVBAR
-      ============================== */}
+      {/* NAVBAR */}
 
       <nav className="dashboard-navbar">
 
@@ -99,19 +93,24 @@ function App() {
           E-Taxi IQ Albania
         </span>
 
+        <div className="dashboard-nav-links">
+
+          <Link to="/">
+            Dashboard
+          </Link>
+
+          <Link to="/reviews">
+            Reviews
+          </Link>
+
+        </div>
+
       </nav>
 
 
-      {/* ==============================
-          DASHBOARD
-      ============================== */}
+      {/* DASHBOARD */}
 
       <main className="container dashboard-container py-5">
-
-
-        {/* ==============================
-            HEADER
-        ============================== */}
 
         <h1 className="page-title mb-2 mt-3">
           Dashboard
@@ -122,16 +121,11 @@ function App() {
         </p>
 
 
-        {/* ==============================
-            STAT CARDS
-        ============================== */}
+        {/* STAT CARDS */}
 
         <div className="row g-4">
 
-
-          {/* TOTAL REVIEWS */}
-
-          <div className="col-sm-6 col-lg-3">
+          <div className="col-md-3">
 
             <div className="card stat-card h-100">
 
@@ -152,9 +146,7 @@ function App() {
           </div>
 
 
-          {/* AVERAGE RATING */}
-
-          <div className="col-sm-6 col-lg-3">
+          <div className="col-md-3">
 
             <div className="card stat-card h-100">
 
@@ -175,9 +167,7 @@ function App() {
           </div>
 
 
-          {/* ANOMALIES */}
-
-          <div className="col-sm-6 col-lg-3">
+          <div className="col-md-3">
 
             <div className="card stat-card h-100">
 
@@ -198,9 +188,7 @@ function App() {
           </div>
 
 
-          {/* COMPANIES */}
-
-          <div className="col-sm-6 col-lg-3">
+          <div className="col-md-3">
 
             <div className="card stat-card h-100">
 
@@ -211,11 +199,13 @@ function App() {
                 </div>
 
                 <div className="stat-value">
+
                   {
                     Object.keys(
                       analytics.company_distribution
                     ).length
                   }
+
                 </div>
 
               </div>
@@ -227,62 +217,22 @@ function App() {
         </div>
 
 
-        {/* ==============================
-            SENTIMENT + RATING
-        ============================== */}
-
-{/* SENTIMENT + RATING */}
-
-<div className="row g-4 mt-2">
-
-  <div className="col-lg-6">
-
-    <SentimentChart
-      sentiment={
-        analytics.sentiment_distribution
-      }
-    />
-
-  </div>
-
-
-  <div className="col-lg-6">
-
-    <RatingChart
-      ratings={
-        analytics.rating_distribution
-      }
-    />
-
-  </div>
-
-</div>
-
-
-{/* ANOMALY */}
-
-<div className="row g-4 mt-2">
-
-  <div className="col-lg-6">
-
-    <AnomalyChart
-      anomalies={
-        analytics.anomalies
-      }
-    />
-
-  </div>
-
-</div>
-
-
-        {/* ==============================
-            COMPANY
-        ============================== */}
+        {/* SENTIMENT + COMPANY */}
 
         <div className="row g-4 mt-2">
 
-          <div className="col-12">
+          <div className="col-lg-6">
+
+            <SentimentChart
+              sentiment={
+                analytics.sentiment_distribution
+              }
+            />
+
+          </div>
+
+
+          <div className="col-lg-6">
 
             <CompanyChart
               companies={
@@ -295,9 +245,35 @@ function App() {
         </div>
 
 
-        {/* ==============================
-            ASPECT
-        ============================== */}
+        {/* RATING + ANOMALY */}
+
+        <div className="row g-4 mt-2">
+
+          <div className="col-lg-6">
+
+            <RatingChart
+              ratings={
+                analytics.rating_distribution
+              }
+            />
+
+          </div>
+
+
+          <div className="col-lg-6">
+
+            <AnomalyChart
+              anomalies={
+                analytics.anomalies
+              }
+            />
+
+          </div>
+
+        </div>
+
+
+        {/* ASPECT */}
 
         <div className="row g-4 mt-2">
 
@@ -313,11 +289,38 @@ function App() {
 
         </div>
 
-
       </main>
 
     </div>
+
   );
+}
+
+
+function App() {
+
+  return (
+
+    <BrowserRouter>
+
+      <Routes>
+
+        <Route
+          path="/"
+          element={<Dashboard />}
+        />
+
+        <Route
+          path="/reviews"
+          element={<Reviews />}
+        />
+
+      </Routes>
+
+    </BrowserRouter>
+
+  );
+
 }
 
 
