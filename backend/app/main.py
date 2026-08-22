@@ -2,6 +2,7 @@ from fastapi import FastAPI, Query
 from fastapi.encoders import jsonable_encoder
 from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
+
 from .database import reviews_collection
 from .schemas import ReviewRequest, ReviewPrediction
 from .models import sentiment_model, aspect_model, anomaly_model
@@ -9,12 +10,17 @@ from .anomaly_features import calculate_anomaly_features
 
 import pandas as pd
 
+
 app = FastAPI(
     title="E-Taxi IQ Albania API",
     description="ML-powered electric taxi review intelligence API",
     version="1.0.0"
 )
 
+
+# ==========================================
+# CORS
+# ==========================================
 
 app.add_middleware(
     CORSMiddleware,
@@ -28,6 +34,10 @@ app.add_middleware(
 )
 
 
+# ==========================================
+# ROOT
+# ==========================================
+
 @app.get("/")
 def root():
     return {
@@ -35,12 +45,20 @@ def root():
     }
 
 
+# ==========================================
+# HEALTH
+# ==========================================
+
 @app.get("/health")
 def health():
     return {
         "status": "healthy"
     }
 
+
+# ==========================================
+# CREATE REVIEW
+# ==========================================
 
 @app.post("/reviews", response_model=ReviewPrediction)
 def create_review(review: ReviewRequest):
@@ -160,13 +178,20 @@ def create_review(review: ReviewRequest):
     )
 
 
+# ==========================================
+# GET REVIEWS
+# ==========================================
+
 @app.get("/reviews")
 def get_reviews(
     company_id: Optional[str] = None,
     city: Optional[str] = None,
     rating: Optional[int] = Query(None, ge=1, le=5),
     sentiment: Optional[str] = None,
-    is_anomaly: Optional[bool] = None
+    is_anomaly: Optional[bool] = None,
+    search: Optional[str] = None,
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100)
 ):
 
     # ==========================================
@@ -190,6 +215,21 @@ def get_reviews(
     if is_anomaly is not None:
         filters["is_anomaly"] = is_anomaly
 
+    if search:
+        filters["review_text"] = {
+            "$regex": search,
+            "$options": "i"
+        }
+
+
+    # ==========================================
+    # PAGINATION
+    # ==========================================
+
+    skip = (page - 1) * limit
+
+    total = reviews_collection.count_documents(filters)
+
 
     # ==========================================
     # FETCH REVIEWS
@@ -200,14 +240,29 @@ def get_reviews(
             filters,
             {"_id": 0}
         )
+        .sort("review_date", -1)
+        .skip(skip)
+        .limit(limit)
     )
 
 
+    # ==========================================
+    # RETURN REVIEWS
+    # ==========================================
+
     return {
         "count": len(reviews),
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "total_pages": (total + limit - 1) // limit,
         "reviews": jsonable_encoder(reviews)
     }
 
+
+# ==========================================
+# ANALYTICS
+# ==========================================
 
 @app.get("/analytics")
 def get_analytics():
@@ -243,7 +298,9 @@ def get_analytics():
         if rating_result
         else 0
     )
-        # ==========================================
+
+
+    # ==========================================
     # RATING DISTRIBUTION
     # ==========================================
 
@@ -342,7 +399,10 @@ def get_analytics():
     company_pipeline = [
         {
             "$group": {
-                "_id": "$company_name",
+                "_id": {
+                    "company_id": "$company_id",
+                    "company_name": "$company_name"
+                },
                 "count": {"$sum": 1}
             }
         },
@@ -357,11 +417,14 @@ def get_analytics():
         reviews_collection.aggregate(company_pipeline)
     )
 
-    company_distribution = {
-        item["_id"]: item["count"]
+    company_distribution = [
+        {
+            "company_id": item["_id"]["company_id"],
+            "company_name": item["_id"]["company_name"],
+            "count": item["count"]
+        }
         for item in company_result
-        if item["_id"] is not None
-    }
+    ]
 
 
     # ==========================================
