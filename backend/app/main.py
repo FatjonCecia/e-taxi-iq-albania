@@ -2,11 +2,10 @@ from fastapi import FastAPI, Query
 from fastapi.encoders import jsonable_encoder
 from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
-
+from collections import defaultdict
+from .ingestion.processor import process_review
 from .database import reviews_collection
 from .schemas import ReviewRequest, ReviewPrediction
-from .models import sentiment_model, aspect_model, anomaly_model
-from .anomaly_features import calculate_anomaly_features
 
 import pandas as pd
 
@@ -63,119 +62,9 @@ def health():
 @app.post("/reviews", response_model=ReviewPrediction)
 def create_review(review: ReviewRequest):
 
-    # ==========================================
-    # SENTIMENT PREDICTION
-    # ==========================================
+    result = process_review(review)
 
-    sentiment_prediction = sentiment_model.predict(
-        [review.review_text]
-    )[0]
-
-
-    # ==========================================
-    # ASPECT PREDICTION
-    # ==========================================
-
-    aspect_prediction = aspect_model.predict(
-        [review.review_text]
-    )[0]
-
-
-    # ==========================================
-    # ANOMALY FEATURES
-    # ==========================================
-
-    features = calculate_anomaly_features(
-        reviews_collection=reviews_collection,
-        company_id=review.company_id,
-        rating=review.rating,
-        review_date=review.review_date,
-        review_text=review.review_text
-    )
-
-
-    # ==========================================
-    # PREPARE ANOMALY MODEL INPUT
-    # ==========================================
-
-    anomaly_input = pd.DataFrame([{
-        "reviews_same_day": features["reviews_same_day"],
-        "company_reviews_same_day": features["company_reviews_same_day"],
-        "rating_reviews_same_day": features["rating_reviews_same_day"],
-        "rating": features["rating"],
-        "text_length": features["text_length"]
-    }])
-
-
-    # ==========================================
-    # ANOMALY PREDICTION
-    # ==========================================
-
-    anomaly_prediction = anomaly_model.predict(
-        anomaly_input
-    )[0]
-
-
-    # ==========================================
-    # ANOMALY REASON
-    # ==========================================
-
-    if anomaly_prediction == 1:
-        anomaly_reason = "Potential review anomaly detected"
-    else:
-        anomaly_reason = None
-
-
-    # ==========================================
-    # BUILD REVIEW DOCUMENT
-    # ==========================================
-
-    review_data = {
-        "review_id": review.review_id,
-        "company_id": review.company_id,
-        "company_name": review.company_name,
-        "city": review.city,
-        "rating": review.rating,
-        "review_date": review.review_date,
-        "review_text": review.review_text,
-        "source_type": review.source_type,
-
-        "overall_sentiment": str(sentiment_prediction),
-        "primary_aspect": str(aspect_prediction),
-
-        "is_anomaly": bool(anomaly_prediction),
-        "anomaly_reason": anomaly_reason,
-
-        "mentioned_driver": None,
-
-        "text_length": features["text_length"]
-    }
-
-
-    # ==========================================
-    # SAVE TO MONGODB
-    # ==========================================
-
-    reviews_collection.insert_one(review_data)
-
-
-    # ==========================================
-    # RETURN PREDICTION
-    # ==========================================
-
-    return ReviewPrediction(
-        review_id=review.review_id,
-        company_id=review.company_id,
-        rating=review.rating,
-
-        overall_sentiment=str(sentiment_prediction),
-        primary_aspect=str(aspect_prediction),
-
-        is_anomaly=bool(anomaly_prediction),
-        anomaly_reason=anomaly_reason,
-
-        mentioned_driver=None
-    )
+    return ReviewPrediction(**result)
 
 
 # ==========================================
@@ -472,4 +361,499 @@ def get_analytics():
         },
         "company_distribution": company_distribution,
         "city_distribution": city_distribution
+    }
+
+
+
+# ==========================================
+# COMPANY INTELLIGENCE
+# ==========================================
+
+@app.get("/companies/{company_id}/intelligence")
+def get_company_intelligence(company_id: str):
+
+    # ==========================================
+    # FIND COMPANY REVIEWS
+    # ==========================================
+
+    company_reviews = list(
+        reviews_collection.find(
+            {
+                "company_id": company_id
+            },
+            {
+                "_id": 0
+            }
+        )
+    )
+
+    # ==========================================
+    # COMPANY NOT FOUND
+    # ==========================================
+
+    if not company_reviews:
+
+        return {
+            "company_id": company_id,
+            "total_reviews": 0,
+            "message": "No reviews found for this company."
+        }
+
+    # ==========================================
+    # BASIC STATISTICS
+    # ==========================================
+
+    total_reviews = len(company_reviews)
+
+    average_rating = sum(
+        review.get("rating", 0)
+        for review in company_reviews
+    ) / total_reviews
+
+    # ==========================================
+    # SENTIMENT DISTRIBUTION
+    # ==========================================
+
+    sentiment_distribution = {
+        "positive": 0,
+        "neutral": 0,
+        "negative": 0
+    }
+
+    for review in company_reviews:
+
+        sentiment = review.get(
+            "overall_sentiment"
+        )
+
+        if sentiment in sentiment_distribution:
+
+            sentiment_distribution[sentiment] += 1
+
+    # ==========================================
+    # SENTIMENT PERCENTAGES
+    # ==========================================
+
+    sentiment_percentages = {
+        sentiment: round(
+            (count / total_reviews) * 100,
+            2
+        )
+        for sentiment, count
+        in sentiment_distribution.items()
+    }
+
+    # ==========================================
+    # ANOMALIES
+    # ==========================================
+
+    anomaly_count = sum(
+        1
+        for review in company_reviews
+        if review.get("is_anomaly", False)
+    )
+
+    normal_count = total_reviews - anomaly_count
+
+    anomaly_percentage = round(
+        (anomaly_count / total_reviews) * 100,
+        2
+    )
+
+    # ==========================================
+    # ASPECT DISTRIBUTION
+    # ==========================================
+
+    aspect_distribution = {}
+
+    for review in company_reviews:
+
+        aspect = review.get(
+            "primary_aspect"
+        )
+
+        if aspect:
+
+            aspect_distribution[aspect] = (
+                aspect_distribution.get(aspect, 0) + 1
+            )
+
+    # ==========================================
+    # RATING DISTRIBUTION
+    # ==========================================
+
+    rating_distribution = {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0
+    }
+
+    for review in company_reviews:
+
+        rating_value = review.get("rating")
+
+        if rating_value is not None:
+
+            rating_distribution[
+                str(rating_value)
+            ] += 1
+
+    # ==========================================
+    # NEGATIVE REVIEWS
+    # ==========================================
+
+    negative_reviews = [
+        review
+        for review in company_reviews
+        if review.get("overall_sentiment") == "negative"
+    ]
+
+    negative_review_count = len(
+        negative_reviews
+    )
+
+    negative_review_percentage = round(
+        (
+            negative_review_count
+            / total_reviews
+        ) * 100,
+        2
+    )
+
+    # ==========================================
+    # COMPANY NAME
+    # ==========================================
+
+    company_name = company_reviews[0].get(
+        "company_name",
+        company_id
+    )
+
+    # ==========================================
+    # RETURN INTELLIGENCE
+    # ==========================================
+
+    return {
+
+        "company_id": company_id,
+
+        "company_name": company_name,
+
+        "total_reviews": total_reviews,
+
+        "average_rating": round(
+            average_rating,
+            2
+        ),
+
+        "sentiment_distribution":
+            sentiment_distribution,
+
+        "sentiment_percentages":
+            sentiment_percentages,
+
+        "anomalies": {
+
+            "total": anomaly_count,
+
+            "normal": normal_count,
+
+            "percentage":
+                anomaly_percentage
+        },
+
+        "negative_reviews": {
+
+            "total":
+                negative_review_count,
+
+            "percentage":
+                negative_review_percentage
+        },
+
+        "aspect_distribution":
+            aspect_distribution,
+
+        "rating_distribution":
+            rating_distribution
+    }
+
+
+
+
+@app.get("/companies/comparison")
+def compare_companies():
+
+    companies = reviews_collection.distinct("company_id")
+
+    results = []
+
+    for company_id in companies:
+
+        reviews = list(
+            reviews_collection.find(
+                {"company_id": company_id},
+                {"_id": 0}
+            )
+        )
+
+        if not reviews:
+            continue
+
+        company_name = reviews[0].get(
+            "company_name",
+            company_id
+        )
+
+        total_reviews = len(reviews)
+
+        # ==============================
+        # AVERAGE RATING
+        # ==============================
+
+        average_rating = round(
+            sum(
+                review.get("rating", 0)
+                for review in reviews
+            ) / total_reviews,
+            2
+        )
+
+        # ==============================
+        # SENTIMENT
+        # ==============================
+
+        positive = sum(
+            1 for review in reviews
+            if review.get("overall_sentiment") == "positive"
+        )
+
+        neutral = sum(
+            1 for review in reviews
+            if review.get("overall_sentiment") == "neutral"
+        )
+
+        negative = sum(
+            1 for review in reviews
+            if review.get("overall_sentiment") == "negative"
+        )
+
+        positive_percentage = round(
+            (positive / total_reviews) * 100,
+            1
+        )
+
+        negative_percentage = round(
+            (negative / total_reviews) * 100,
+            1
+        )
+
+        # ==============================
+        # ANOMALIES
+        # ==============================
+
+        anomalies = sum(
+            1 for review in reviews
+            if review.get("is_anomaly") is True
+        )
+
+        anomaly_percentage = round(
+            (anomalies / total_reviews) * 100,
+            1
+        )
+
+        # ==============================
+        # ASPECTS
+        # ==============================
+
+        aspect_distribution = {}
+
+        for review in reviews:
+
+            aspect = review.get("primary_aspect")
+
+            if aspect:
+
+                aspect_distribution[aspect] = (
+                    aspect_distribution.get(aspect, 0) + 1
+                )
+
+        top_aspect = None
+
+        if aspect_distribution:
+
+            top_aspect = max(
+                aspect_distribution,
+                key=aspect_distribution.get
+            )
+
+        # ==============================
+        # BUILD RESULT
+        # ==============================
+
+        results.append({
+
+            "company_id": company_id,
+
+            "company_name": company_name,
+
+            "total_reviews": total_reviews,
+
+            "average_rating": average_rating,
+
+            "positive_reviews": positive,
+
+            "neutral_reviews": neutral,
+
+            "negative_reviews": negative,
+
+            "positive_percentage":
+                positive_percentage,
+
+            "negative_percentage":
+                negative_percentage,
+
+            "anomalies": anomalies,
+
+            "anomaly_percentage":
+                anomaly_percentage,
+
+            "top_aspect": top_aspect
+
+        })
+
+    # Highest-rated companies first
+
+    results.sort(
+        key=lambda company:
+            company["average_rating"],
+        reverse=True
+    )
+
+    return {
+        "companies": results
+    }
+
+
+
+
+@app.get("/analytics/trends")
+def get_review_trends():
+
+    reviews = list(
+        reviews_collection.find(
+            {},
+            {
+                "_id": 0,
+                "review_date": 1,
+                "rating": 1,
+                "overall_sentiment": 1,
+                "is_anomaly": 1
+            }
+        )
+    )
+
+    monthly_data = defaultdict(
+        lambda: {
+            "reviews": 0,
+            "rating_sum": 0,
+            "positive": 0,
+            "neutral": 0,
+            "negative": 0,
+            "anomalies": 0
+        }
+    )
+
+    for review in reviews:
+
+        review_date = review.get("review_date")
+
+        if not review_date:
+            continue
+
+        # Handle MongoDB datetime or string
+        if hasattr(review_date, "strftime"):
+
+            month = review_date.strftime("%Y-%m")
+
+        else:
+
+            month = str(review_date)[:7]
+
+        data = monthly_data[month]
+
+        data["reviews"] += 1
+
+        data["rating_sum"] += review.get(
+            "rating",
+            0
+        )
+
+        sentiment = review.get(
+            "overall_sentiment"
+        )
+
+        if sentiment == "positive":
+
+            data["positive"] += 1
+
+        elif sentiment == "neutral":
+
+            data["neutral"] += 1
+
+        elif sentiment == "negative":
+
+            data["negative"] += 1
+
+        if review.get("is_anomaly") is True:
+
+            data["anomalies"] += 1
+
+
+    # ==========================================
+    # BUILD RESPONSE
+    # ==========================================
+
+    trends = []
+
+    for month in sorted(monthly_data.keys()):
+
+        data = monthly_data[month]
+
+        total = data["reviews"]
+
+        if total == 0:
+            continue
+
+        trends.append({
+
+            "month": month,
+
+            "reviews": total,
+
+            "average_rating": round(
+                data["rating_sum"] / total,
+                2
+            ),
+
+            "positive": data["positive"],
+
+            "neutral": data["neutral"],
+
+            "negative": data["negative"],
+
+            "anomalies": data["anomalies"],
+
+            "anomaly_percentage": round(
+                (data["anomalies"] / total) * 100,
+                1
+            )
+
+        })
+
+
+    return {
+        "trends": trends
     }

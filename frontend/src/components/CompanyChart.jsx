@@ -23,14 +23,28 @@ ChartJS.register(
 
 function CompanyChart({ companies }) {
 
+  // ==========================================
+  // PREPARE COMPANY DATA
+  // ==========================================
+
+  const companyData = Array.isArray(companies)
+    ? companies
+    : [];
+
+
   const data = {
-    labels: Object.keys(companies),
+
+    labels: companyData.map(
+      (company) => company.company_name
+    ),
 
     datasets: [
       {
         label: "Reviews",
 
-        data: Object.values(companies),
+        data: companyData.map(
+          (company) => company.count
+        ),
 
         backgroundColor: "#3b82f6",
 
@@ -39,8 +53,13 @@ function CompanyChart({ companies }) {
         borderSkipped: false
       }
     ]
+
   };
 
+
+  // ==========================================
+  // CHART OPTIONS
+  // ==========================================
 
   const options = {
 
@@ -63,6 +82,7 @@ function CompanyChart({ companies }) {
     scales: {
 
       y: {
+
         beginAtZero: true,
 
         ticks: {
@@ -72,23 +92,33 @@ function CompanyChart({ companies }) {
         grid: {
           color: "#e5e7eb"
         }
+
       },
 
       x: {
+
         grid: {
           display: false
         },
 
         ticks: {
+
           maxRotation: 45,
+
           minRotation: 0
+
         }
+
       }
 
     }
 
   };
 
+
+  // ==========================================
+  // RENDER
+  // ==========================================
 
   return (
 

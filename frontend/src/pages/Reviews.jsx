@@ -14,6 +14,7 @@ function Reviews() {
   const [cities, setCities] = useState([]);
   const [reviews, setReviews] = useState([]);
 
+
   // ==========================================
   // FILTER STATE
   // ==========================================
@@ -25,12 +26,14 @@ function Reviews() {
   const [anomalyOnly, setAnomalyOnly] = useState(false);
   const [search, setSearch] = useState("");
 
+
   // ==========================================
   // PAGINATION STATE
   // ==========================================
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
 
   // ==========================================
   // LOADING / ERROR
@@ -39,11 +42,47 @@ function Reviews() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+
   // ==========================================
   // SEARCH DEBOUNCE
   // ==========================================
 
   const searchTimeout = useRef(null);
+
+
+  // ==========================================
+  // CONFIDENCE HELPER
+  // ==========================================
+
+  const getConfidenceLevel = (confidence) => {
+
+    if (confidence == null) {
+      return {
+        label: "N/A",
+        className: "bg-secondary"
+      };
+    }
+
+    if (confidence >= 0.80) {
+      return {
+        label: "High",
+        className: "bg-success"
+      };
+    }
+
+    if (confidence >= 0.60) {
+      return {
+        label: "Medium",
+        className: "bg-warning text-dark"
+      };
+    }
+
+    return {
+      label: "Low",
+      className: "bg-danger"
+    };
+
+  };
 
 
   // ==========================================
@@ -116,99 +155,47 @@ function Reviews() {
         const filters = {};
 
 
-        // ==========================================
-        // COMPANY FILTER
-        // ==========================================
-
         if (company) {
-
           filters.company_id = company;
-
         }
 
-
-        // ==========================================
-        // CITY FILTER
-        // ==========================================
 
         if (city) {
-
           filters.city = city;
-
         }
 
-
-        // ==========================================
-        // RATING FILTER
-        // ==========================================
 
         if (rating) {
-
           filters.rating = Number(rating);
-
         }
 
-
-        // ==========================================
-        // SENTIMENT FILTER
-        // ==========================================
 
         if (sentiment) {
-
           filters.sentiment = sentiment;
-
         }
 
-
-        // ==========================================
-        // ANOMALY FILTER
-        // ==========================================
 
         if (anomalyOnly) {
-
           filters.is_anomaly = true;
-
         }
 
-
-        // ==========================================
-        // SEARCH
-        // ==========================================
 
         if (search.trim()) {
-
           filters.search = search.trim();
-
         }
 
-
-        // ==========================================
-        // PAGINATION
-        // ==========================================
 
         filters.page = page;
         filters.limit = 10;
 
 
-        // ==========================================
-        // API REQUEST
-        // ==========================================
-
         const data = await getReviews(filters);
 
-
-        // ==========================================
-        // UPDATE REVIEWS
-        // ==========================================
 
         setReviews(
           data.reviews || []
         );
 
-
-        // ==========================================
-        // UPDATE TOTAL PAGES
-        // ==========================================
 
         setTotalPages(
           data.total_pages || 1
@@ -234,10 +221,6 @@ function Reviews() {
     };
 
 
-    // ==========================================
-    // DEBOUNCE SEARCH
-    // ==========================================
-
     clearTimeout(
       searchTimeout.current
     );
@@ -250,17 +233,11 @@ function Reviews() {
 
     searchTimeout.current = setTimeout(
       () => {
-
         loadReviews();
-
       },
       delay
     );
 
-
-    // ==========================================
-    // CLEANUP
-    // ==========================================
 
     return () => {
 
@@ -288,6 +265,7 @@ function Reviews() {
   if (loading) {
 
     return (
+
       <div className="container py-5">
 
         <h3>
@@ -295,6 +273,7 @@ function Reviews() {
         </h3>
 
       </div>
+
     );
 
   }
@@ -307,6 +286,7 @@ function Reviews() {
   if (error) {
 
     return (
+
       <div className="container py-5">
 
         <div className="alert alert-danger">
@@ -316,6 +296,7 @@ function Reviews() {
         </div>
 
       </div>
+
     );
 
   }
@@ -335,16 +316,12 @@ function Reviews() {
       ====================================== */}
 
       <h1 className="page-title">
-
         Review Intelligence
-
       </h1>
 
 
       <p className="page-subtitle mb-4">
-
         Explore customer reviews and ML insights
-
       </p>
 
 
@@ -357,9 +334,7 @@ function Reviews() {
         <div className="card-body">
 
           <h5 className="mb-3">
-
             Filter Reviews
-
           </h5>
 
 
@@ -368,18 +343,14 @@ function Reviews() {
           <div className="mb-3">
 
             <label className="form-label">
-
               Search reviews
-
             </label>
 
 
             <div className="input-group">
 
               <span className="input-group-text">
-
                 🔍
-
               </span>
 
 
@@ -406,9 +377,7 @@ function Reviews() {
             <div className="col-md-3">
 
               <label className="form-label">
-
                 Company
-
               </label>
 
 
@@ -424,9 +393,7 @@ function Reviews() {
               >
 
                 <option value="">
-
                   All companies
-
                 </option>
 
 
@@ -453,9 +420,7 @@ function Reviews() {
             <div className="col-md-3">
 
               <label className="form-label">
-
                 City
-
               </label>
 
 
@@ -471,9 +436,7 @@ function Reviews() {
               >
 
                 <option value="">
-
                   All cities
-
                 </option>
 
 
@@ -500,9 +463,7 @@ function Reviews() {
             <div className="col-md-2">
 
               <label className="form-label">
-
                 Rating
-
               </label>
 
 
@@ -518,39 +479,27 @@ function Reviews() {
               >
 
                 <option value="">
-
                   All ratings
-
                 </option>
 
                 <option value="5">
-
                   ⭐ 5
-
                 </option>
 
                 <option value="4">
-
                   ⭐ 4
-
                 </option>
 
                 <option value="3">
-
                   ⭐ 3
-
                 </option>
 
                 <option value="2">
-
                   ⭐ 2
-
                 </option>
 
                 <option value="1">
-
                   ⭐ 1
-
                 </option>
 
               </select>
@@ -563,9 +512,7 @@ function Reviews() {
             <div className="col-md-2">
 
               <label className="form-label">
-
                 Sentiment
-
               </label>
 
 
@@ -581,27 +528,19 @@ function Reviews() {
               >
 
                 <option value="">
-
                   All
-
                 </option>
 
                 <option value="positive">
-
                   Positive
-
                 </option>
 
                 <option value="neutral">
-
                   Neutral
-
                 </option>
 
                 <option value="negative">
-
                   Negative
-
                 </option>
 
               </select>
@@ -681,9 +620,7 @@ function Reviews() {
       <div className="mb-4">
 
         <strong>
-
           {reviews.length}
-
         </strong>{" "}
 
         reviews on this page
@@ -697,111 +634,332 @@ function Reviews() {
 
       <div className="row g-4">
 
-        {reviews.map((review) => (
+        {reviews.map((review) => {
 
-          <div
-            className="col-12"
-            key={review.review_id}
-          >
-
-            <div className="card review-card">
-
-              <div className="card-body">
+          const sentimentConfidence =
+            getConfidenceLevel(
+              review.sentiment_confidence
+            );
 
 
-                {/* HEADER */}
-
-                <div className="d-flex justify-content-between align-items-start">
-
-                  <div>
-
-                    <h5 className="mb-1">
-
-                      {review.company_name}
-
-                    </h5>
+          const aspectConfidence =
+            getConfidenceLevel(
+              review.aspect_confidence
+            );
 
 
-                    <small className="text-muted">
+          const anomalyConfidence =
+            getConfidenceLevel(
+              review.anomaly_confidence
+            );
 
-                      {review.city}
 
-                    </small>
+          return (
+
+            <div
+              className="col-12"
+              key={review.review_id}
+            >
+
+              <div className="card review-card">
+
+                <div className="card-body">
+
+
+                  {/* HEADER */}
+
+                  <div className="d-flex justify-content-between align-items-start">
+
+                    <div>
+
+                      <h5 className="mb-1">
+                        {review.company_name}
+                      </h5>
+
+
+                      <small className="text-muted">
+                        {review.city}
+                      </small>
+
+                    </div>
+
+
+                    {/* RATING */}
+
+                    <div className="review-rating">
+
+                      {"⭐".repeat(review.rating)}
+
+                    </div>
 
                   </div>
 
 
-                  {/* RATING */}
+                  <hr />
 
-                  <div className="review-rating">
 
-                    {"⭐".repeat(review.rating)}
+                  {/* REVIEW TEXT */}
+
+                  <p className="review-text">
+                    {review.review_text}
+                  </p>
+
+
+                  {/* ==================================
+                      ML PREDICTIONS
+                  ================================== */}
+
+                  <div className="row g-3 mt-2">
+
+
+                    {/* SENTIMENT */}
+
+                    <div className="col-md-4">
+
+                      <div className="border rounded p-3 h-100">
+
+                        <small className="text-muted d-block">
+                          Sentiment
+                        </small>
+
+
+                        <strong className="text-capitalize">
+                          {review.overall_sentiment || "N/A"}
+                        </strong>
+
+
+                        <div className="d-flex justify-content-between mt-2">
+
+                          <small>
+                            Confidence
+                          </small>
+
+                          <strong>
+
+                            {review.sentiment_confidence != null
+                              ? `${(
+                                  review.sentiment_confidence * 100
+                                ).toFixed(1)}%`
+                              : "N/A"
+                            }
+
+                          </strong>
+
+                        </div>
+
+
+                        {review.sentiment_confidence != null && (
+
+                          <div className="progress mt-1">
+
+                            <div
+                              className="progress-bar"
+                              style={{
+                                width: `${
+                                  review.sentiment_confidence * 100
+                                }%`
+                              }}
+                            />
+
+                          </div>
+
+                        )}
+
+
+                        <span
+                          className={`badge ${sentimentConfidence.className} mt-2`}
+                        >
+
+                          {sentimentConfidence.label}
+
+                        </span>
+
+                      </div>
+
+                    </div>
+
+
+                    {/* ASPECT */}
+
+                    <div className="col-md-4">
+
+                      <div className="border rounded p-3 h-100">
+
+                        <small className="text-muted d-block">
+                          Primary Aspect
+                        </small>
+
+
+                        <strong className="text-capitalize">
+
+                          {review.primary_aspect
+                            ? review.primary_aspect.replace(/_/g, " ")
+                            : "N/A"
+                          }
+
+                        </strong>
+
+
+                        <div className="d-flex justify-content-between mt-2">
+
+                          <small>
+                            Confidence
+                          </small>
+
+                          <strong>
+
+                            {review.aspect_confidence != null
+                              ? `${(
+                                  review.aspect_confidence * 100
+                                ).toFixed(1)}%`
+                              : "N/A"
+                            }
+
+                          </strong>
+
+                        </div>
+
+
+                        {review.aspect_confidence != null && (
+
+                          <div className="progress mt-1">
+
+                            <div
+                              className="progress-bar"
+                              style={{
+                                width: `${
+                                  review.aspect_confidence * 100
+                                }%`
+                              }}
+                            />
+
+                          </div>
+
+                        )}
+
+
+                        <span
+                          className={`badge ${aspectConfidence.className} mt-2`}
+                        >
+
+                          {aspectConfidence.label}
+
+                        </span>
+
+                      </div>
+
+                    </div>
+
+
+                    {/* ANOMALY */}
+
+                    <div className="col-md-4">
+
+                      <div className="border rounded p-3 h-100">
+
+                        <small className="text-muted d-block">
+                          Anomaly Detection
+                        </small>
+
+
+                        <strong>
+
+                          {review.is_anomaly
+                            ? "🚨 Detected"
+                            : "✅ Normal"
+                          }
+
+                        </strong>
+
+
+                        <div className="d-flex justify-content-between mt-2">
+
+                          <small>
+                            Confidence
+                          </small>
+
+                          <strong>
+
+                            {review.anomaly_confidence != null
+                              ? `${(
+                                  review.anomaly_confidence * 100
+                                ).toFixed(1)}%`
+                              : "N/A"
+                            }
+
+                          </strong>
+
+                        </div>
+
+
+                        {review.anomaly_confidence != null && (
+
+                          <div className="progress mt-1">
+
+                            <div
+                              className="progress-bar"
+                              style={{
+                                width: `${
+                                  review.anomaly_confidence * 100
+                                }%`
+                              }}
+                            />
+
+                          </div>
+
+                        )}
+
+
+                        <span
+                          className={`badge ${anomalyConfidence.className} mt-2`}
+                        >
+
+                          {anomalyConfidence.label}
+
+                        </span>
+
+                      </div>
+
+                    </div>
 
                   </div>
 
-                </div>
 
+                  {/* ANOMALY REASON */}
 
-                <hr />
+                  {review.anomaly_reason && (
 
+                    <div className="alert alert-warning mt-3 mb-0">
 
-                {/* REVIEW TEXT */}
+                      <strong>
+                        Anomaly:
+                      </strong>{" "}
 
-                <p className="review-text">
+                      {review.anomaly_reason}
 
-                  {review.review_text}
-
-                </p>
-
-
-                {/* ML INFORMATION */}
-
-                <div className="d-flex flex-wrap gap-2">
-
-
-                  <span className="badge bg-primary">
-
-                    {review.overall_sentiment}
-
-                  </span>
-
-
-                  <span className="badge bg-secondary">
-
-                    {review.primary_aspect}
-
-                  </span>
-
-
-                  {review.is_anomaly && (
-
-                    <span className="badge bg-danger">
-
-                      🚨 Anomaly
-
-                    </span>
+                    </div>
 
                   )}
 
+
+                  {/* DATE */}
+
+                  <small className="text-muted d-block mt-3">
+
+                    {review.review_date}
+
+                  </small>
+
+
                 </div>
-
-
-                {/* DATE */}
-
-                <small className="text-muted d-block mt-3">
-
-                  {review.review_date}
-
-                </small>
-
 
               </div>
 
             </div>
 
-          </div>
+          );
 
-        ))}
+        })}
 
 
         {/* NO RESULTS */}
@@ -826,8 +984,6 @@ function Reviews() {
       <div className="d-flex justify-content-center align-items-center gap-3 mt-4">
 
 
-        {/* PREVIOUS */}
-
         <button
           className="btn btn-outline-primary"
           disabled={page === 1}
@@ -841,30 +997,22 @@ function Reviews() {
         </button>
 
 
-        {/* PAGE NUMBER */}
-
         <span>
 
           Page{" "}
 
           <strong>
-
             {page}
-
           </strong>{" "}
 
           of{" "}
 
           <strong>
-
             {totalPages}
-
           </strong>
 
         </span>
 
-
-        {/* NEXT */}
 
         <button
           className="btn btn-outline-primary"

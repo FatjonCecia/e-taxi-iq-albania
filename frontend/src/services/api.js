@@ -27,3 +27,32 @@ export const createReview = async (review) => {
 
   return response.data;
 };
+
+export const getCompanyIntelligence = async (companyId) => {
+
+  const response = await API.get(
+    `/companies/${companyId}/intelligence`
+  );
+
+  return response.data;
+};
+
+
+export const getCompanyComparison = async () => {
+
+  const response = await API.get(
+    "/companies/comparison"
+  );
+
+  return response.data;
+};
+
+
+export const getReviewTrends = async () => {
+
+  const response = await API.get(
+    "/analytics/trends"
+  );
+
+  return response.data;
+};
