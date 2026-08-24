@@ -1,17 +1,14 @@
 import axios from "axios";
 
-
 const API = axios.create({
-  baseURL: "http://127.0.0.1:8000",
+  baseURL: import.meta.env.VITE_API_URL,
 });
-
 
 export const getAnalytics = async () => {
   const response = await API.get("/analytics");
 
   return response.data;
 };
-
 
 export const getReviews = async (filters = {}) => {
   const response = await API.get("/reviews", {
@@ -21,7 +18,6 @@ export const getReviews = async (filters = {}) => {
   return response.data;
 };
 
-
 export const createReview = async (review) => {
   const response = await API.post("/reviews", review);
 
@@ -29,7 +25,6 @@ export const createReview = async (review) => {
 };
 
 export const getCompanyIntelligence = async (companyId) => {
-
   const response = await API.get(
     `/companies/${companyId}/intelligence`
   );
@@ -37,9 +32,7 @@ export const getCompanyIntelligence = async (companyId) => {
   return response.data;
 };
 
-
 export const getCompanyComparison = async () => {
-
   const response = await API.get(
     "/companies/comparison"
   );
@@ -47,9 +40,7 @@ export const getCompanyComparison = async () => {
   return response.data;
 };
 
-
 export const getReviewTrends = async () => {
-
   const response = await API.get(
     "/analytics/trends"
   );
