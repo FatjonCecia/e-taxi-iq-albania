@@ -865,8 +865,8 @@ function Reviews() {
                         <strong>
 
                           {review.is_anomaly
-                            ? "🚨 Detected"
-                            : "✅ Normal"
+                            ? " Detected"
+                            : " Normal"
                           }
 
                         </strong>

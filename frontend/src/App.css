@@ -1,13 +1,12 @@
 /* =========================================================
    GLOBAL
    ========================================================= */
-
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
 body {
   margin: 0;
   background: #f3f8f5;
   color: #17221c;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
+   font-family: 'Manrope', sans-serif;
 }
 
 
