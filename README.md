@@ -8,7 +8,7 @@ The project combines React, FastAPI, MongoDB, and Machine Learning to transform 
 
 **Frontend:** [E-Taxi IQ Albania — Vercel](YOUR_VERCEL_LINK_HERE)
 
-> Replace `YOUR_VERCEL_LINK_HERE` with your actual Vercel deployment URL.
+
 
 ---
 
